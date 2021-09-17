@@ -78,6 +78,7 @@
               type="warning"
               icon="el-icon-setting"
               size="mini"
+              @click="setRole(scope.row)"
             ></el-button>
           </el-tooltip>
         </template>
@@ -156,6 +157,31 @@
         <el-button type="primary" @click="editChange">确 定</el-button>
       </span>
     </el-dialog>
+    <!-- 分配角色对话框 -->
+    <el-dialog title="分配角色" :visible.sync="RoledialogVisible" width="50%" @close='closeRolse'>
+      <div>
+        <p>当前的用户{{ userInfo.username }}</p>
+        <p>当前的角色{{ userInfo.role_name }}</p>
+        <p>
+          分配新角色
+          <el-select v-model="selectRoleId" placeholder="请选择">
+            <el-option
+              v-for="item in rolesList"
+              :key="item.id"
+              :label="item.roleName"
+              :value="item.id"
+            >
+            </el-option>
+          </el-select>
+        </p>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="RoledialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="SaveRoleInfo"
+          >确 定</el-button
+        >
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -166,7 +192,9 @@ import {
   getNewUsers,
   getIdUsers,
   getIdchange,
-  getDelete
+  getDelete,
+  setRolesList,
+  PostRoles
 } from '../../api/api.js'
 
 export default {
@@ -209,6 +237,13 @@ export default {
       //控制添加用户对话框的显示和隐藏
       addDialogVisible: false,
       editDialogVisible: false,
+      RoledialogVisible: false,
+      //需要被分配权限的用户
+      userInfo: {},
+      //所有角色的数据列表
+      rolesList: [],
+      //已经选中的角色id
+      selectRoleId:'',
       total: 0,
       //表单的验证规则对象
       rulesaddFrom: {
@@ -333,23 +368,53 @@ export default {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning',
-      }).then(() => {
+      })
+        .then(() => {
           this.$message({
             type: 'success',
             message: '删除成功!',
           })
-          getDelete('users/'+id).then(res=>{
+          getDelete('users/' + id).then((res) => {
             this.getUserslists()
-            console.log(res);
+            console.log(res)
           })
           //发送网络请求
-        }).catch(() => {
+        })
+        .catch(() => {
           this.$message({
             type: 'info',
             message: '已取消删除',
           })
         })
     },
+    //分配角色
+    setRole(item) {
+      this.userInfo = item
+      console.log(this.userInfo);
+      //获取所有的角色列表
+      setRolesList().then((res) => {
+        if (res.meta.status !== 200)
+          return this.$message.error('获取角色列表失败')
+        this.rolesList = res.data
+      })
+      this.RoledialogVisible = true
+    },
+    //点击确定后，分配新的角色
+    SaveRoleInfo(){
+      if(!this.selectRoleId){
+        return this.$message.error('请选择角色')
+      }
+      PostRoles(this.userInfo.id,{rid:Number(this.selectRoleId)}).then(res=>{
+        console.log(res);
+        this.getUserslists()
+        this.RoledialogVisible=false
+      })
+    },
+    //监听关闭分配角色对话框事件
+    closeRolse(){
+      this.userInfo={}
+      this.selectRoleId=''
+    }
   },
 }
 </script>
